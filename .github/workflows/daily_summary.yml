@@ -1,0 +1,13 @@
+name: Daily Summary
+
+on:
+  schedule:
+    - cron: '0 10 * * *'  # UTC 10:00 = 台灣 18:00
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger summary
+        run: |
+          curl -X POST https://line-summary-bot-rmuu.onrender.com/send_summary
