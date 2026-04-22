@@ -51,7 +51,7 @@ def generate_summary(messages):
         }]
     )
     return response.content[0].text
-
+# force redeploy
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
@@ -62,7 +62,7 @@ def webhook():
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-    return "OK"
+    return "OK", 200
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
