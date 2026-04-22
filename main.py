@@ -15,7 +15,11 @@ LINE_SECRET = os.environ.get("LINE_SECRET")
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY")
 SHEET_ID = os.environ.get("SHEET_ID")
 GOOGLE_CREDS = os.environ.get("GOOGLE_CREDS")
-
+USER_NAMES = {
+    "Ue155232bc37f6ad93a4789c6f101f019": "闆娘",
+    "Ub4d3e2422af273265c13fb865eae04e7": "闆娘",
+    "U4f56a471c0b7e90d7dd3ceb2b1293d59": "Apple",
+}
 line_bot_api = LineBotApi(LINE_TOKEN)
 handler = WebhookHandler(LINE_SECRET)
 
@@ -41,7 +45,7 @@ def get_today_messages():
 
 def generate_summary(messages):
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-    content = "\n".join([f"{r[0]} {r[1]}: {r[2]}" for r in messages])
+    content = "\n".join([f"{r[0]} {USER_NAMES.get(r[1], r[1])}: {r[2]}" for r in messages])
     response = client.messages.create(
         model="claude-opus-4-5",
         max_tokens=1000,
