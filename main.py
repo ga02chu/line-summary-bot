@@ -94,6 +94,14 @@ def handle_message(event):
     text = event.message.text
     user_id = event.source.user_id
     save_message(user_id, text)
+    if text == "群組ID":
+        source = event.source
+        if hasattr(source, 'group_id'):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"群組ID：{source.group_id}")
+            )
+        return
     if text == "摘要":
         msgs = get_today_messages()
         if not msgs:
@@ -108,7 +116,21 @@ def handle_message(event):
 @app.route("/")
 def index():
     return "Bot is running!", 200
-
+@app.route("/send_summary", methods=["POST", "GET"])
+def send_summary():
+    msgs = get_today_messages()
+    if not msgs:
+        summary = "今天還沒有對話記錄！"
+    else:
+        summary = generate_summary(msgs)
+    
+    # 取得群組ID（需要填入你的群組ID）
+    group_id = os.environ.get("GROUP_ID")
+    line_bot_api.push_message(
+        group_id,
+        TextSendMessage(text=summary)
+    )
+    return jsonify({"status": "ok"}), 200
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
