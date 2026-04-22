@@ -52,9 +52,11 @@ def generate_summary(messages):
     )
     return response.content[0].text
 
-@app.route("/webhook", methods=["POST"])
+@app.route("/webhook", methods=["GET", "POST"])
 def webhook():
-    signature = request.headers["X-Line-Signature"]
+    if request.method == "GET":
+        return "OK", 200
+    signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
     try:
         handler.handle(body, signature)
@@ -66,11 +68,7 @@ def webhook():
 def handle_message(event):
     text = event.message.text
     user_id = event.source.user_id
-    
-    # 儲存訊息
     save_message(user_id, text)
-    
-    # 指令：發送摘要（輸入「摘要」觸發）
     if text == "摘要":
         msgs = get_today_messages()
         if not msgs:
