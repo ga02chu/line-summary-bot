@@ -35,7 +35,8 @@ def get_sheet():
 def save_message(user_id, text):
     sheet = get_sheet()
     now = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
-    sheet.append_row([now, user_id, text])
+    display_name = USER_NAMES.get(user_id, user_id)
+    sheet.append_row([now, display_name, text])
 
 def get_today_messages():
     sheet = get_sheet()
