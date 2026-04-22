@@ -1,4 +1,4 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
@@ -51,18 +51,16 @@ def generate_summary(messages):
         }]
     )
     return response.content[0].text
-# force redeploy
-@app.route("/webhook", methods=["GET", "POST"])
+
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    if request.method == "GET":
-        return "OK", 200
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-    return "OK", 200
+    return jsonify({"status": "ok"}), 200
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -82,7 +80,8 @@ def handle_message(event):
 
 @app.route("/")
 def index():
-    return "Bot is running!"
+    return "Bot is running!", 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
