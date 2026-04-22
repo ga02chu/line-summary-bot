@@ -3,7 +3,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os, json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import anthropic
 import gspread
 from google.oauth2.service_account import Credentials
@@ -34,7 +34,7 @@ def get_sheet():
 
 def save_message(user_id, text):
     sheet = get_sheet()
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
     sheet.append_row([now, user_id, text])
 
 def get_today_messages():
