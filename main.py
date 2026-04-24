@@ -49,7 +49,7 @@ def generate_summary(messages):
     content = "\n".join([f"{r[0]} {USER_NAMES.get(r[1], r[1])}: {r[2]}" for r in messages])
     response = client.messages.create(
         model="claude-opus-4-5",
-        max_tokens=3000,
+        max_tokens=6000,
         messages=[{
             "role": "user",
             "content": f"""以下是今天的Line群組對話記錄，請依照以下格式整理成繁體中文摘要：
