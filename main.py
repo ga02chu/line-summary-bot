@@ -46,11 +46,11 @@ def get_today_messages():
 
 def generate_summary(messages):
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-    content = "\n".join([f"{r[0]} {USER_NAMES.get(r[1], r[1])}: {r[2]}" for r in messages[-200:]])
+    content = "\n".join([f"{r[0]} {USER_NAMES.get(r[1], r[1])}: {r[2]}" for r in messages[-100:]])
 
     response = client.messages.create(
         model="claude-opus-4-5",
-        max_tokens=4000,
+        max_tokens=2000,
         messages=[{
             "role": "user",
             "content": f"""以下是今天的Line群組對話記錄，請依照以下格式整理成繁體中文摘要：
