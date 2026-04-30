@@ -40,7 +40,7 @@ def save_message(user_id, text):
 
 def get_today_messages():
     sheet = get_sheet()
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     rows = sheet.get_all_values()
     return [r for r in rows if r and r[0].startswith(today)]
 
