@@ -95,15 +95,30 @@ def webhook():
 def handle_message(event):
     text = event.message.text
     user_id = event.source.user_id
-    save_message(user_id, text)
+    source = event.source
+    group_id = getattr(source, 'group_id', None)
+
+    # 「群組ID」指令在任何群組都可用，方便取得新群組 ID
     if text == "群組ID":
-        source = event.source
-        if hasattr(source, 'group_id'):
+        if group_id:
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=f"群組ID：{source.group_id}")
+                TextSendMessage(text=f"群組ID：{group_id}")
+            )
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="這不是群組訊息")
             )
         return
+
+    # 其他功能（存 Google Sheet、摘要）只在白名單群組執行
+    apple_group_id = os.environ.get("GROUP_ID")
+    if group_id != apple_group_id:
+        return
+
+    save_message(user_id, text)
+
     if text == "摘要":
         msgs = get_today_messages()
         if not msgs:
