@@ -162,6 +162,24 @@ def next_sort_order(table):
             return int(rows[0].get("sort_order", 0)) + 1
     return 1
 
+def is_recent_duplicate(table, column, value, minutes=5):
+    """檢查 table 內最近 N 分鐘是否已有同 column 值的紀錄
+    解決 LINE webhook retry + Render 重啟 in-memory dedup 失效的問題
+    """
+    if not value:
+        return False
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()
+    # PostgREST URL 編碼處理
+    import urllib.parse
+    encoded_value = urllib.parse.quote(value, safe="")
+    res = supabase_request(
+        "GET",
+        f"{table}?{column}=eq.{encoded_value}&created_at=gte.{cutoff}&select=id&limit=1"
+    )
+    if res and res.ok:
+        return len(res.json()) > 0
+    return False
+
 def fetch_ig_thumbnail(ig_url):
     """從 IG reel URL 抓 og:image 縮圖（用 facebookexternalhit UA）"""
     try:
@@ -250,6 +268,9 @@ def execute_studio_action(cmd):
         name = cmd.get("name", "").strip()
         if not name:
             return "✗ 缺商品名稱"
+        # 防重複：5 分鐘內已有同名商品就 skip
+        if is_recent_duplicate("products", "name", name):
+            return None  # 安靜跳過，不回 LINE
         payload = {
             "name": name,
             "start_date": cmd.get("start_date"),
@@ -309,6 +330,9 @@ def execute_studio_action(cmd):
             ig_url += "/"
         if not title or not ig_url:
             return "✗ 缺 Reel 標題或連結"
+        # 防重複：5 分鐘內已有同 ig_url 就 skip
+        if is_recent_duplicate("reels", "ig_url", ig_url):
+            return None
         # 上架時直接抓縮圖
         thumb = fetch_ig_thumbnail(ig_url)
         payload = {
@@ -329,6 +353,9 @@ def execute_studio_action(cmd):
         title = cmd.get("title", "").strip()
         if not title:
             return "✗ 缺故事標題"
+        # 防重複：5 分鐘內已有同標題故事就 skip
+        if is_recent_duplicate("stories", "title", title):
+            return None
         payload = {
             "title": title,
             "era": cmd.get("era"),
