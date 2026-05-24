@@ -153,6 +153,41 @@ def supabase_request(method, path, data=None):
     except Exception as e:
         return None
 
+def next_sort_order(table):
+    """取得 table 目前最大 sort_order + 1（讓新項目排在最後）"""
+    res = supabase_request("GET", f"{table}?select=sort_order&order=sort_order.desc&limit=1")
+    if res and res.ok:
+        rows = res.json()
+        if rows:
+            return int(rows[0].get("sort_order", 0)) + 1
+    return 1
+
+def fetch_ig_thumbnail(ig_url):
+    """從 IG reel URL 抓 og:image 縮圖（用 facebookexternalhit UA）"""
+    try:
+        m = re.search(r'/reels?/([A-Za-z0-9_-]+)', ig_url)
+        if not m:
+            return None
+        shortcode = m.group(1)
+        target = f"https://www.instagram.com/reel/{shortcode}/"
+        r = requests.get(
+            target,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh) facebookexternalhit/1.1"},
+            timeout=8
+        )
+        if not r.ok:
+            return None
+        og = re.search(r'property="og:image"\s+content="([^"]+)"', r.text)
+        if not og:
+            return None
+        img = og.group(1).replace("&amp;", "&")
+        # IG fallback logo 過濾掉
+        if "static.cdninstagram.com" in img:
+            return None
+        return img
+    except Exception:
+        return None
+
 def parse_studio_command(text):
     """用 Claude 解析自然語言 studio 指令"""
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
@@ -224,7 +259,7 @@ def execute_studio_action(cmd):
             "purchase_url": cmd.get("purchase_url", ""),
             "is_always_open": bool(cmd.get("is_always_open", False)),
             "status": "active",
-            "sort_order": 999,
+            "sort_order": next_sort_order("products"),
         }
         res = supabase_request("POST", "products", payload)
         if res is None:
@@ -274,16 +309,20 @@ def execute_studio_action(cmd):
             ig_url += "/"
         if not title or not ig_url:
             return "✗ 缺 Reel 標題或連結"
+        # 上架時直接抓縮圖
+        thumb = fetch_ig_thumbnail(ig_url)
         payload = {
             "title": title,
             "description": cmd.get("description"),
             "ig_url": ig_url,
+            "thumbnail_url": thumb,
             "status": "active",
-            "sort_order": 999,
+            "sort_order": next_sort_order("reels"),
         }
         res = supabase_request("POST", "reels", payload)
         if res and res.ok:
-            return f"✓ 已新增 Reel「{title}」\n（縮圖會自動抓，幾秒後刷新前台查看）"
+            thumb_msg = "縮圖已自動抓好" if thumb else "縮圖抓不到，可在後台手動補"
+            return f"✓ 已新增 Reel「{title}」\n（{thumb_msg}）"
         return f"✗ 新增 Reel 失敗"
 
     if action == "add_story":
@@ -295,7 +334,7 @@ def execute_studio_action(cmd):
             "era": cmd.get("era"),
             "description": cmd.get("description"),
             "status": "active",
-            "sort_order": 999,
+            "sort_order": next_sort_order("stories"),
         }
         res = supabase_request("POST", "stories", payload)
         if res and res.ok:
