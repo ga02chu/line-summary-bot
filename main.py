@@ -338,17 +338,32 @@ def handle_message(event):
         )
         return
 
-    # ga02. studio 指令處理（必須 tag 嘎秘書）
-    if is_bot_addressed(event, text) and looks_like_studio_command(text):
+    # ga02. studio 指令處理：tag 嘎秘書就送 Claude 解析（不做關鍵字過濾）
+    if is_bot_addressed(event, text):
         try:
             cmd = parse_studio_command(text)
-            if cmd.get("action") not in (None, "none"):
+            action = cmd.get("action")
+            if action and action != "none":
                 reply = execute_studio_action(cmd)
                 if reply:
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(text=reply)
                     )
+            else:
+                # 看不懂指令，給友善提示
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=(
+                        "嗨～我看不太懂這個指令 🙂\n\n"
+                        "可以試試：\n"
+                        "• 列表（看目前在賣什麼）\n"
+                        "• 上架商品（含名稱/開團/結團/連結）\n"
+                        "• 下架 商品名\n"
+                        "• 新 reel（含標題/連結）\n"
+                        "• 新故事（含標題/描述）"
+                    ))
+                )
         except Exception as e:
             line_bot_api.reply_message(
                 event.reply_token,
