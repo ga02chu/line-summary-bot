@@ -88,6 +88,38 @@ def generate_summary(messages):
 
 STUDIO_TRIGGERS = ["上架", "下架", "列表", "查商品", "目前在賣", "新增 reel", "新 reel", "新增故事", "新故事", "新團購", "結團了"]
 
+# 文字觸發 mention（沒 LINE 原生 @ 但打這些字也算 tag）
+BOT_MENTION_KEYWORDS = ["@嘎秘書", "@嘎", "@ga", "嘎秘書", "ga秘書", "ga 秘書"]
+
+# Bot user ID 快取（LINE API 取一次）
+_BOT_USER_ID = None
+
+def get_bot_user_id():
+    global _BOT_USER_ID
+    if _BOT_USER_ID is None:
+        try:
+            info = line_bot_api.get_bot_info()
+            _BOT_USER_ID = info.user_id
+        except Exception:
+            _BOT_USER_ID = ""
+    return _BOT_USER_ID or None
+
+def is_bot_addressed(event, text):
+    """訊息是否在「叫」嘎秘書 ─ 兩種方式都認：
+    1. LINE 原生 @ mention（跳選單選 bot）
+    2. 文字含「嘎秘書」「ga 秘書」之類關鍵字
+    """
+    mention = getattr(event.message, "mention", None)
+    if mention is not None:
+        bot_id = get_bot_user_id()
+        mentionees = getattr(mention, "mentionees", []) or []
+        if bot_id:
+            for m in mentionees:
+                if getattr(m, "user_id", None) == bot_id:
+                    return True
+    lower = text.lower()
+    return any(k.lower() in lower for k in BOT_MENTION_KEYWORDS)
+
 def looks_like_studio_command(text):
     """快速判斷文字是否可能是 studio 指令"""
     return any(t in text.lower() for t in [t.lower() for t in STUDIO_TRIGGERS])
@@ -306,8 +338,8 @@ def handle_message(event):
         )
         return
 
-    # ga02. studio 指令處理
-    if looks_like_studio_command(text):
+    # ga02. studio 指令處理（必須 tag 嘎秘書）
+    if is_bot_addressed(event, text) and looks_like_studio_command(text):
         try:
             cmd = parse_studio_command(text)
             if cmd.get("action") not in (None, "none"):
