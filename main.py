@@ -3,6 +3,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os, json, re
+from collections import deque
 from datetime import datetime, timezone, timedelta
 import anthropic
 import gspread
@@ -123,6 +124,18 @@ def is_bot_addressed(event, text):
 def looks_like_studio_command(text):
     """快速判斷文字是否可能是 studio 指令"""
     return any(t in text.lower() for t in [t.lower() for t in STUDIO_TRIGGERS])
+
+# In-memory 去重：保存最近處理過的 LINE message ID
+# 避免 LINE webhook 超時 retry 導致同訊息被處理多次
+_PROCESSED_STUDIO_MSG_IDS = deque(maxlen=500)
+
+def is_duplicate_studio_message(msg_id):
+    if not msg_id:
+        return False
+    if msg_id in _PROCESSED_STUDIO_MSG_IDS:
+        return True
+    _PROCESSED_STUDIO_MSG_IDS.append(msg_id)
+    return False
 
 def supabase_request(method, path, data=None):
     """打 Supabase REST API"""
@@ -340,6 +353,10 @@ def handle_message(event):
 
     # ga02. studio 指令處理：tag 嘎秘書就送 Claude 解析（不做關鍵字過濾）
     if is_bot_addressed(event, text):
+        # 去重：避免 LINE webhook 超時重試導致同訊息被處理多次
+        msg_id = getattr(event.message, "id", None)
+        if msg_id and is_duplicate_studio_message(msg_id):
+            return
         try:
             cmd = parse_studio_command(text)
             action = cmd.get("action")
