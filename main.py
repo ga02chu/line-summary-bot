@@ -267,7 +267,11 @@ def execute_studio_action(cmd):
 
     if action == "add_reel":
         title = cmd.get("title", "").strip()
-        ig_url = cmd.get("ig_url", "").replace("/reels/", "/reel/")
+        ig_url = cmd.get("ig_url", "")
+        # normalize：/reels/ → /reel/，拿掉 ?igsh=... 之類 query string
+        ig_url = ig_url.replace("/reels/", "/reel/").split("?")[0]
+        if ig_url and not ig_url.endswith("/"):
+            ig_url += "/"
         if not title or not ig_url:
             return "✗ 缺 Reel 標題或連結"
         payload = {
