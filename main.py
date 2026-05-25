@@ -89,8 +89,8 @@ def generate_summary(messages):
 
 STUDIO_TRIGGERS = ["上架", "下架", "列表", "查商品", "目前在賣", "新增 reel", "新 reel", "新增故事", "新故事", "新團購", "結團了"]
 
-# 文字觸發 mention（沒 LINE 原生 @ 但打這些字也算 tag）
-BOT_MENTION_KEYWORDS = ["@嘎秘書", "@嘎", "@ga", "嘎秘書", "ga秘書", "ga 秘書"]
+# 文字觸發 mention（必須有 @ 字元，不接受純打「嘎秘書」三個字）
+BOT_MENTION_KEYWORDS = ["@嘎秘書", "@嘎", "@ga"]
 
 # Bot user ID 快取（LINE API 取一次）
 _BOT_USER_ID = None
